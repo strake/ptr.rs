@@ -36,7 +36,6 @@ use core::mem;
 /// Unlike `*mut T`, `Unique<T>` is covariant over `T`. This should always be correct
 /// for any type which upholds Unique's aliasing requirements.
 #[allow(missing_debug_implementations)]
-#[derive(Clone, Copy)]
 pub struct Unique<T: ?Sized> {
     pointer: *const T,
     // NOTE: this marker has no consequences for variance, but is necessary
@@ -46,6 +45,13 @@ pub struct Unique<T: ?Sized> {
     // https://github.com/rust-lang/rfcs/blob/master/text/0769-sound-generic-drop.md#phantom-data
     _marker: PhantomData<T>,
 }
+
+impl<T: ?Sized> Clone for Unique<T> {
+    #[inline(always)]
+    fn clone(&self) -> Self { *self }
+}
+
+impl<T: ?Sized> Copy for Unique<T> {}
 
 /// `Unique` pointers are `Send` if `T` is `Send` because the data they
 /// reference is unaliased. Note that this aliasing invariant is
