@@ -36,6 +36,7 @@ use core::mem;
 /// Unlike `*mut T`, `Unique<T>` is covariant over `T`. This should always be correct
 /// for any type which upholds Unique's aliasing requirements.
 #[allow(missing_debug_implementations)]
+#[derive(Clone, Copy)]
 pub struct Unique<T: ?Sized> {
     pointer: *const T,
     // NOTE: this marker has no consequences for variance, but is necessary
