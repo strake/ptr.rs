@@ -95,7 +95,7 @@ impl<T: ?Sized> Unique<T> {
     }
 
     /// Acquires the underlying `*mut` pointer.
-    pub fn as_ptr(self) -> *mut T { self.pointer as _ }
+    pub const fn as_ptr(self) -> *mut T { self.pointer as _ }
 
     /// Dereferences the content.
     ///
@@ -174,7 +174,7 @@ impl<T: ?Sized> Shared<T> {
     pub fn new(ptr: *mut T) -> Option<Self> { Unique::new(ptr).map(Self::from) }
 
     /// Acquires the underlying `*mut` pointer.
-    pub fn as_ptr(self) -> *mut T { self.pointer as _ }
+    pub const fn as_ptr(self) -> *mut T { self.pointer as _ }
 
     /// Dereferences the content.
     ///
