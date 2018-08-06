@@ -89,9 +89,7 @@ impl<T: ?Sized> Unique<T> {
     }
 
     /// Creates a new `Unique` if `ptr` is non-null.
-    pub fn new(ptr: *mut T) -> Option<Self> {
-        NonNull::new(ptr).map(|ptr| Self { ptr, _marker: PhantomData })
-    }
+    pub fn new(ptr: *mut T) -> Option<Self> { NonNull::new(ptr).map(Self::from) }
 
     /// Acquires the underlying `*mut` pointer.
     pub const fn as_ptr(self) -> NonNull<T> { self.ptr }
@@ -127,6 +125,10 @@ impl<'a, T: ?Sized> From<&'a T> for Unique<T> {
     fn from(reference: &'a T) -> Self {
         Unique { ptr: reference.into(), _marker: PhantomData }
     }
+}
+
+impl<T: ?Sized> From<NonNull<T>> for Unique<T> {
+    fn from(ptr: NonNull<T>) -> Self { Self { ptr, _marker: PhantomData } }
 }
 
 /// `*mut T` but non-zero and covariant.
@@ -167,10 +169,10 @@ impl<T: ?Sized> Shared<T> {
     /// # Safety
     ///
     /// `ptr` must be non-null.
-    pub const unsafe fn new_unchecked(ptr: *mut T) -> Self { Shared { ptr: NonNull::new_unchecked(ptr) } }
+    pub const unsafe fn new_unchecked(ptr: *mut T) -> Self { Self { ptr: NonNull::new_unchecked(ptr) } }
 
     /// Creates a new `Shared` if `ptr` is non-null.
-    pub fn new(ptr: *mut T) -> Option<Self> { Unique::new(ptr).map(Self::from) }
+    pub fn new(ptr: *mut T) -> Option<Self> { NonNull::new(ptr).map(Self::from) }
 
     /// Acquires the underlying `*mut` pointer.
     pub const fn as_ptr(self) -> NonNull<T> { self.ptr }
@@ -217,4 +219,8 @@ impl<'a, T: ?Sized> From<&'a T> for Shared<T> {
     fn from(reference: &'a T) -> Self {
         Shared { ptr: reference.into() }
     }
+}
+
+impl<T: ?Sized> From<NonNull<T>> for Shared<T> {
+    fn from(ptr: NonNull<T>) -> Self { Self { ptr } }
 }
