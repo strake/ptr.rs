@@ -16,6 +16,7 @@ use core::fmt;
 use core::option::Option;
 use core::marker::{PhantomData, Send, Sized, Sync};
 use core::mem;
+use core::ptr::NonNull;
 
 /// A wrapper around a raw non-null `*mut T` that indicates that the possessor
 /// of this wrapper owns the referent. Useful for building abstractions like
@@ -39,7 +40,7 @@ use core::mem;
 /// for any type which upholds Unique's aliasing requirements.
 #[allow(missing_debug_implementations)]
 pub struct Unique<T: ?Sized> {
-    pointer: *const T,
+    ptr: NonNull<T>,
     // NOTE: this marker has no consequences for variance, but is necessary
     // for dropck to understand that we logically own a `T`.
     //
@@ -84,48 +85,47 @@ impl<T: ?Sized> Unique<T> {
     ///
     /// `ptr` must be non-null.
     pub const unsafe fn new_unchecked(ptr: *mut T) -> Self {
-        Unique { pointer: ptr, _marker: PhantomData }
+        Unique { ptr: NonNull::new_unchecked(ptr), _marker: PhantomData }
     }
 
     /// Creates a new `Unique` if `ptr` is non-null.
     pub fn new(ptr: *mut T) -> Option<Self> {
-        if 0 == ptr as *mut () as usize { None }
-        else { Some(unsafe { Self::new_unchecked(ptr) }) }
+        NonNull::new(ptr).map(|ptr| Self { ptr, _marker: PhantomData })
     }
 
     /// Acquires the underlying `*mut` pointer.
-    pub const fn as_ptr(self) -> *mut T { self.pointer as _ }
+    pub const fn as_ptr(self) -> NonNull<T> { self.ptr }
 
     /// Dereferences the content.
     ///
     /// The resulting lifetime is bound to self so this behaves "as if"
     /// it were actually an instance of T that is getting borrowed. If a longer
     /// (unbound) lifetime is needed, use `&*my_ptr.ptr()`.
-    pub unsafe fn as_ref(&self) -> &T { &*self.pointer }
+    pub unsafe fn as_ref(&self) -> &T { self.ptr.as_ref() }
 
     /// Mutably dereferences the content.
     ///
     /// The resulting lifetime is bound to self so this behaves "as if"
     /// it were actually an instance of T that is getting borrowed. If a longer
     /// (unbound) lifetime is needed, use `&mut *my_ptr.ptr()`.
-    pub unsafe fn as_mut(&mut self) -> &mut T { &mut *(self.pointer as *mut T) }
+    pub unsafe fn as_mut(&mut self) -> &mut T { self.ptr.as_mut() }
 }
 
 impl<T: ?Sized> fmt::Pointer for Unique<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Pointer::fmt(&self.pointer, f)
+        fmt::Pointer::fmt(&self.ptr, f)
     }
 }
 
 impl<'a, T: ?Sized> From<&'a mut T> for Unique<T> {
     fn from(reference: &'a mut T) -> Self {
-        Unique { pointer: reference, _marker: PhantomData }
+        Unique { ptr: reference.into(), _marker: PhantomData }
     }
 }
 
 impl<'a, T: ?Sized> From<&'a T> for Unique<T> {
     fn from(reference: &'a T) -> Self {
-        Unique { pointer: reference, _marker: PhantomData }
+        Unique { ptr: reference.into(), _marker: PhantomData }
     }
 }
 
@@ -148,7 +148,7 @@ impl<'a, T: ?Sized> From<&'a T> for Unique<T> {
 /// provide a public API that follows the normal shared XOR mutable rules of Rust.
 #[allow(missing_debug_implementations)]
 pub struct Shared<T: ?Sized> {
-    pointer: *const T,
+    ptr: NonNull<T>,
 }
 
 impl<T: Sized> Shared<T> {
@@ -167,27 +167,27 @@ impl<T: ?Sized> Shared<T> {
     /// # Safety
     ///
     /// `ptr` must be non-null.
-    pub const unsafe fn new_unchecked(ptr: *mut T) -> Self { Shared { pointer: ptr } }
+    pub const unsafe fn new_unchecked(ptr: *mut T) -> Self { Shared { ptr: NonNull::new_unchecked(ptr) } }
 
     /// Creates a new `Shared` if `ptr` is non-null.
     pub fn new(ptr: *mut T) -> Option<Self> { Unique::new(ptr).map(Self::from) }
 
     /// Acquires the underlying `*mut` pointer.
-    pub const fn as_ptr(self) -> *mut T { self.pointer as _ }
+    pub const fn as_ptr(self) -> NonNull<T> { self.ptr }
 
     /// Dereferences the content.
     ///
     /// The resulting lifetime is bound to self so this behaves "as if"
     /// it were actually an instance of T that is getting borrowed. If a longer
     /// (unbound) lifetime is needed, use `&*my_ptr.ptr()`.
-    pub unsafe fn as_ref(&self) -> &T { &*self.pointer }
+    pub unsafe fn as_ref(&self) -> &T { self.ptr.as_ref() }
 
     /// Mutably dereferences the content.
     ///
     /// The resulting lifetime is bound to self so this behaves "as if"
     /// it were actually an instance of T that is getting borrowed. If a longer
     /// (unbound) lifetime is needed, use `&mut *my_ptr.ptr_mut()`.
-    pub unsafe fn as_mut(&mut self) -> &mut T { &mut *(self.pointer as *mut T) }
+    pub unsafe fn as_mut(&mut self) -> &mut T { self.ptr.as_mut() }
 }
 
 impl<T: ?Sized> Clone for Shared<T> {
@@ -204,17 +204,17 @@ impl<T: ?Sized> fmt::Pointer for Shared<T> {
 }
 
 impl<T: ?Sized> From<Unique<T>> for Shared<T> {
-    fn from(unique: Unique<T>) -> Self { Shared { pointer: unique.pointer } }
+    fn from(unique: Unique<T>) -> Self { Shared { ptr: unique.ptr } }
 }
 
 impl<'a, T: ?Sized> From<&'a mut T> for Shared<T> {
     fn from(reference: &'a mut T) -> Self {
-        Shared { pointer: reference }
+        Shared { ptr: reference.into() }
     }
 }
 
 impl<'a, T: ?Sized> From<&'a T> for Shared<T> {
     fn from(reference: &'a T) -> Self {
-        Shared { pointer: reference }
+        Shared { ptr: reference.into() }
     }
 }
