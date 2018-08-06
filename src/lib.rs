@@ -10,7 +10,6 @@
 
 #![no_std]
 
-#![feature(const_align_of)]
 #![feature(const_fn)]
 
 use core::fmt;
