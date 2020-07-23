@@ -10,7 +10,9 @@
 
 #![no_std]
 
+#![feature(coerce_unsized)]
 #![feature(const_fn)]
+#![feature(unsize)]
 
 use core::fmt;
 use core::option::Option;
@@ -224,3 +226,6 @@ impl<'a, T: ?Sized> From<&'a T> for Shared<T> {
 impl<T: ?Sized> From<NonNull<T>> for Shared<T> {
     fn from(ptr: NonNull<T>) -> Self { Self { ptr } }
 }
+
+impl<S: ?Sized + core::marker::Unsize<T>, T: ?Sized> core::ops::CoerceUnsized<Unique<T>> for Unique<S> {}
+impl<S: ?Sized + core::marker::Unsize<T>, T: ?Sized> core::ops::CoerceUnsized<Shared<T>> for Shared<S> {}
