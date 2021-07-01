@@ -11,7 +11,6 @@
 #![no_std]
 
 #![feature(coerce_unsized)]
-#![feature(const_fn)]
 #![feature(unsize)]
 
 use core::fmt;
